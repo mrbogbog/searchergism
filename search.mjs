@@ -10,7 +10,8 @@ export function prepareEntries(entries) {
   }));
 }
 
-export function findEntries(entries, query) {
+export function findEntries(entries, query, categories = null) {
+  if (categories !== null) entries = entries.filter((entry) => categories.has(entry.category));
   const normalized = normalize(query);
   const words = [...new Set(normalized.split(' ').filter(Boolean))];
   if (!words.length) return entries;

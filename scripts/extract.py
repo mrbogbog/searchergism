@@ -208,10 +208,18 @@ def main():
     parser.add_argument('--source', type=Path, default=ROOT / 'source-reference/SynergismOfficial')
     parser.add_argument('--write', action='store_true', help='Explicitly replace the editable data/index.json seed')
     parser.add_argument('--output', type=Path, help='Write a candidate elsewhere for comparison; does not overwrite the canonical index')
+    parser.add_argument('--raw', action='store_true', help='Generate the uncurated extraction for review; requires --output')
     args = parser.parse_args()
     if args.write and args.output:
         parser.error('Choose --write or --output, not both')
+    if args.raw and (args.write or not args.output):
+        parser.error('--raw requires --output and cannot overwrite the curated index with --write')
+    if args.raw and args.output.resolve() == (ROOT / 'data/index.json').resolve():
+        parser.error('--raw cannot overwrite data/index.json')
     result = extract(args.source)
+    if not args.raw:
+        from curation import apply_curation
+        result = apply_curation(result)
     print(json.dumps(result['meta'], ensure_ascii=False, indent=2))
     target = ROOT / 'data/index.json' if args.write else args.output
     if target:

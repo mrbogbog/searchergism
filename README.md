@@ -10,7 +10,7 @@ From the repository root:
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open <http://localhost:8000>. Stop with Ctrl+C. Opening `index.html` directly via `file://` will not load the JSON/module files in most browsers. Searches update as you type; all words match in any order across names, descriptions, categories, and source keys. Exact name matches rank first. `/` focuses search and Escape clears it. `?q=offering+potion` links to a search. Results render 60 at a time; matching always searches the **entire** index.
+Open <http://localhost:8000>. Stop with Ctrl+C. Opening `index.html` directly via `file://` will not load the JSON/module files in most browsers. Searches update as you type; all words match in any order across names, descriptions, categories, and source keys. Exact name matches rank first. `/` focuses search and Escape clears it. `?q=offering+potion` links to a search. Results render in a single full-width column, 60 at a time; matching searches all records in the selected categories. Expand/collapse **Categories** and toggle any of the 19 categories, or use Select all / Select none. Selected categories are combined (OR), then narrowed by the text query (AND). Clear/Escape clears only the query; Reset all filters restores every category too. Category selections are included in shareable URLs using repeated `category` parameters. Source details remain in the JSON and audit log, but are no longer displayed on result cards.
 
 ## Publish to GitHub Pages
 
@@ -41,7 +41,17 @@ python3 scripts/extract.py --write
 
 Delete a candidate after comparing it. Keep new manual curation rather than blindly regenerating. Extraction is deterministic for the same reference; metadata includes the English file SHA-256 and version from `package.json`. The source copy need not be present to preview or publish the site.
 
-### Coverage and known gaps
+### Upgrade-only curation — 2026-11-12
+
+The live index now contains **1,184** upgrade/modifier records across **19** categories; **3,659** of the original 4,843 records were removed. It retains 2,653 original translation strings. The Static Game Help category and its three records were removed in a follow-up at user request; the complete session log reflects these decisions. **673** retained records contain dynamic parameters.
+
+See [the complete session log](docs/index-curation-2026-11-12.md) for **every kept and removed record**, its original indexed text, category, source references and decision reason. The machine-readable decisions are in `data/curation-decisions.json`, with a hash of each reviewed text.
+
+Kept: actual stat/yield/multiplier/exponent/cap/cost/free-level changes, challenge bonuses, and upgrades changing starting resources or preserving accumulated values. Variable magnitudes count. Removed: standalone labels, balances, current levels, output/progress reports, costs, instructions, flavor-only text, statistics-factor names, and unlock/automation-only records. A grouped description is retained unchanged if it contains a real modifying effect; accompanying flavor or unlock text may remain inside that record.
+
+Regeneration now applies the explicit decisions by default, **not keyword heuristics**. New or changed text stops regeneration and requires review; existing removals cannot silently reappear. To inspect a fresh uncurated extraction, use `python3 scripts/extract.py --raw --output data/candidate.json`; raw output cannot overwrite the live index. `scripts/curation.py` applies the decisions and can generate the session audit. The original extraction coverage below describes the **pre-curation seed**, not the current searchable scope.
+
+### Original extraction coverage and known gaps
 
 - All **6,453** nonempty translation strings in 31 selected gameplay roots are preserved verbatim in provenance. These become **4,776** grouped translation records plus **67** static HTML records: **4,843** total across **30** categories. The page’s “What’s in this index?” panel and JSON metadata provide category counts.
 - **1,379** records contain interpolation parameters. `⟨value⟩` means an unresolved in-game value, not zero or an estimated number. Current/next effects, costs, progress, conditional rewards, computed formulas and save-dependent unlocks are **not evaluated**. Both conditional text variants may appear together.
@@ -57,7 +67,7 @@ node --test tests/search.test.mjs
 python3 -m unittest discover -s tests -p '*_test.py' -v
 ```
 
-Node 18+ is sufficient for search unit tests. Extraction tests additionally need the local reference copy; they check unique IDs, category totals, exact raw preservation of every selected leaf, formatting cleanup, and deterministic regeneration. If you manually curate the index, the deterministic-seed assertion will need to be adapted to the intended changes. Browser checks should cover initial load, multiword search, no matches, clear, load more, source disclosure, keyboard shortcuts, direct query URLs, failure/retry, and narrow screens.
+Node 18+ is sufficient for search unit tests. The eight Python tests check curated counts, every keep/remove decision and log entry, user examples, removed UI/unlocks, preserved real modifiers, and rejection of unreviewed new/changed text. With the local reference present they also verify complete raw extraction, unchanged retained provenance and deterministic curated regeneration; source-dependent checks skip when it is absent. If manually editing indexed text, review the matching decision/hash rather than bypassing the curation guard. Browser checks should cover initial load, multiword search, no matches, clear, load more, source disclosure, keyboard shortcuts, direct query URLs, failure/retry, and narrow screens.
 
 ## Files and styling
 

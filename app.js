@@ -7,6 +7,47 @@ let matches = [];
 let shown = 0;
 let searchFrame = 0;
 let urlTimer = 0;
+let categories = [];
+let selectedCategories = new Set();
+
+function readCategorySelection() {
+  const params = new URL(location.href).searchParams;
+  selectedCategories = new Set(params.has('category')
+    ? params.getAll('category').filter((category) => categories.includes(category))
+    : categories);
+}
+
+function syncCategoryControls() {
+  document.querySelectorAll('#category-options input').forEach((input) => {
+    input.checked = selectedCategories.has(input.value);
+  });
+  $('category-summary').textContent = `${selectedCategories.size} / ${categories.length} selected`;
+  $('select-all').disabled = selectedCategories.size === categories.length;
+  $('select-none').disabled = selectedCategories.size === 0;
+}
+
+function buildCategoryControls() {
+  const counts = new Map();
+  for (const entry of entries) counts.set(entry.category, (counts.get(entry.category) || 0) + 1);
+  categories = [...counts.keys()].sort((a, b) => a.localeCompare(b));
+  readCategorySelection();
+  $('category-options').replaceChildren();
+  for (const category of categories) {
+    const label = node('label', undefined, 'category-toggle');
+    const input = node('input');
+    input.type = 'checkbox';
+    input.value = category;
+    input.addEventListener('change', () => {
+      if (input.checked) selectedCategories.add(category);
+      else selectedCategories.delete(category);
+      syncCategoryControls();
+      search();
+    });
+    label.append(input, node('span', category), node('span', formatter.format(counts.get(category)), 'category-count'));
+    $('category-options').append(label);
+  }
+  syncCategoryControls();
+}
 const formatter = new Intl.NumberFormat('en');
 
 function node(tag, text, className) {
@@ -45,16 +86,6 @@ function card(entry) {
   article.append(category, title);
   if (entry.dynamic) article.append(node('span', 'Contains game-calculated values', 'dynamic'));
   article.append(description);
-  const source = node('details', undefined, 'source');
-  source.append(node('summary', 'Source · ' + entry.id));
-  const list = node('ul');
-  for (const item of entry.sources) {
-    const line = node('li');
-    line.append(node('code', item.file + ' → ' + item.key), node('span', item.raw));
-    list.append(line);
-  }
-  source.append(list);
-  article.append(source);
   return article;
 }
 
@@ -76,12 +107,20 @@ function updateURL() {
   const query = $('search').value.trim();
   if (query) url.searchParams.set('q', query);
   else url.searchParams.delete('q');
+  url.searchParams.delete('category');
+  if (selectedCategories.size !== categories.length) {
+    if (selectedCategories.size === 0) url.searchParams.append('category', '');
+    else categories.filter((category) => selectedCategories.has(category)).forEach((category) => url.searchParams.append('category', category));
+  }
   try { history.replaceState(null, '', url); } catch { /* Search remains usable if history is restricted. */ }
 }
 
 function search() {
   $('results').setAttribute('aria-busy', 'true');
-  matches = findEntries(entries, $('search').value);
+  matches = findEntries(entries, $('search').value, selectedCategories);
+  $('empty-hint').textContent = selectedCategories.size === 0
+    ? 'No categories are selected. Select a category or reset all filters.'
+    : 'Try fewer words, select more categories, or reset all filters.';
   $('results').replaceChildren();
   shown = 0;
   $('empty').hidden = matches.length !== 0;
@@ -102,19 +141,6 @@ function clearSearch() {
   $('search').focus();
 }
 
-function coverage(meta) {
-  $('version').textContent = meta.sourceVersion || '';
-  $('coverage-description').textContent = `${formatter.format(meta.translationStringsIncluded)} English translation strings plus static HTML help, organized into ${formatter.format(entries.length)} records across ${Object.keys(meta.categories).length} categories. Seeded from the local Synergism ${meta.sourceVersion} reference. ${formatter.format(meta.dynamicEntries)} seed records contain game-calculated parameters.`;
-  $('category-counts').replaceChildren();
-  const counts = new Map();
-  for (const entry of entries) counts.set(entry.category, (counts.get(entry.category) || 0) + 1);
-  for (const [category, count] of [...counts].sort(([a], [b]) => a.localeCompare(b))) {
-    const row = node('div');
-    row.append(node('dt', category), node('dd', formatter.format(count)));
-    $('category-counts').append(row);
-  }
-}
-
 async function load() {
   $('error').hidden = true;
   $('retry').disabled = true;
@@ -126,9 +152,9 @@ async function load() {
     const data = await response.json();
     if (data.schemaVersion !== 1 || !Array.isArray(data.entries) || !data.entries.length) throw new Error('Invalid index schema');
     entries = prepareEntries(data.entries);
-    coverage(data.meta);
+    $('version').textContent = data.meta.sourceVersion || '';
     $('search').disabled = false;
-    document.querySelectorAll('[data-query]').forEach((button) => { button.disabled = false; });
+    buildCategoryControls();
     search();
   } catch (error) {
     $('error').hidden = false;
@@ -144,14 +170,23 @@ $('search').value = new URL(location.href).searchParams.get('q') || '';
 $('search-form').addEventListener('submit', (event) => { event.preventDefault(); search(); updateURL(); });
 $('search').addEventListener('input', queueSearch);
 $('clear').addEventListener('click', clearSearch);
-$('reset').addEventListener('click', clearSearch);
+$('reset').addEventListener('click', () => {
+  selectedCategories = new Set(categories);
+  syncCategoryControls();
+  clearSearch();
+});
 $('more').addEventListener('click', renderNextPage);
 $('retry').addEventListener('click', load);
-document.querySelectorAll('[data-query]').forEach((button) => button.addEventListener('click', () => {
-  $('search').value = button.dataset.query;
+$('select-all').addEventListener('click', () => {
+  selectedCategories = new Set(categories);
+  syncCategoryControls();
   search();
-  $('search').focus();
-}));
+});
+$('select-none').addEventListener('click', () => {
+  selectedCategories.clear();
+  syncCategoryControls();
+  search();
+});
 document.addEventListener('keydown', (event) => {
   if (event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
   const editing = event.target instanceof Element && (event.target.matches('input, textarea, select') || event.target.isContentEditable);
@@ -166,6 +201,10 @@ document.addEventListener('keydown', (event) => {
 });
 window.addEventListener('popstate', () => {
   $('search').value = new URL(location.href).searchParams.get('q') || '';
-  if (entries.length) search();
+  if (entries.length) {
+    readCategorySelection();
+    syncCategoryControls();
+    search();
+  }
 });
 load();

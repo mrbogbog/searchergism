@@ -22,6 +22,15 @@ for (const phrase of ['golden quarks', 'platonic', 'rune', 'ambrosia', 'purple r
 const custom = prepareEntries([{id:'test',name:'<img src=x onerror=alert(1)>',category:'Unusual',text:'Rarely normalized café',sources:[{key:'hiddenSourceIdentifier'}]}]);
 assert.equal(findEntries(custom, 'cafe').length, 1);
 assert.equal(findEntries(custom, 'hiddenSourceIdentifier').length, 1);
+const research = new Set(['Research']);
+assert.deepEqual(findEntries(entries, '', research), entries.filter((entry) => entry.category === 'Research'));
+assert.ok(findEntries(entries, 'offering', research).length > 0);
+assert.ok(findEntries(entries, 'offering', research).every((entry) => entry.category === 'Research'));
+assert.equal(findEntries(entries, '', new Set()).length, 0);
+assert.equal(findEntries(entries, 'quark', new Set(['Missing category'])).length, 0);
+const combined = new Set(['Research', 'Achievements']);
+assert.equal(findEntries(entries, '', combined).length, entries.filter((entry) => combined.has(entry.category)).length);
+assert.deepEqual(findEntries(entries, 'quark', new Set(entries.map((entry) => entry.category))), findEntries(entries, 'quark'));
 const start = performance.now();
 for (let i = 0; i < 100; i++) findEntries(entries, ['quark', 'ambrosia', 'rune offering', 'cube upgrade'][i % 4]);
 console.log(`Search assertions passed: ${entries.length} records; average query ${((performance.now() - start) / 100).toFixed(2)}ms`);

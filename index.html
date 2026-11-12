@@ -17,23 +17,25 @@
     <a class="game-link" href="https://synergism.cc/">Play Synergism ↗</a>
   </header>
   <main>
-    <section class="search-panel" aria-labelledby="search-heading">
-      <h2 id="search-heading">A little less hovering. A lot more finding.</h2>
-      <p>Search upgrades, challenges, research, and the small print behind your next big number.</p>
+    <section class="search-panel" aria-label="Search and filter upgrades">
       <form id="search-form" role="search">
         <label for="search">Search the game’s text</label>
-        <div class="search-field"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Try “offering potion”, “hepteract”, or “rune”…" autocomplete="off" spellcheck="false" aria-describedby="search-hint" disabled><button id="clear" type="button" disabled>Clear</button></div>
+        <div class="search-field"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Try “quark”, “offering”, or “ambrosia”…" autocomplete="off" spellcheck="false" aria-describedby="search-hint" disabled><button id="clear" type="button" disabled>Clear</button></div>
         <p id="search-hint" class="hint">All words must match, in any order. Names, descriptions, categories, and source keys are searched. <kbd>/</kbd> to focus · <kbd>Esc</kbd> to clear</p>
       </form>
-      <div class="suggestions" aria-label="Example searches"><span>Explore:</span><button type="button" data-query="quarks" disabled>Quarks</button><button type="button" data-query="research" disabled>Research</button><button type="button" data-query="hepteract" disabled>Hepteracts</button><button type="button" data-query="ambrosia" disabled>Ambrosia</button></div>
+      <details id="category-filter" class="category-filter" open>
+        <summary>Categories <span id="category-summary">Loading…</span></summary>
+        <p id="category-hint" class="hint">Toggle categories to include. Multiple selected categories are combined; your search narrows them further.</p>
+        <div class="category-actions"><button id="select-all" type="button" disabled>Select all</button><button id="select-none" type="button" disabled>Select none</button></div>
+        <div id="category-options" role="group" aria-label="Included categories" aria-describedby="category-hint"></div>
+      </details>
     </section>
     <aside class="scope-note"><strong>Spoilers ahead.</strong> All stages are included. <span class="template-example">⟨value⟩</span> marks a value calculated by the game, not a live stat.</aside>
     <div class="results-heading"><h2>Game reference</h2><p id="status" role="status" aria-live="polite" aria-atomic="true">Loading the static index…</p></div>
     <div id="error" role="alert" hidden><h3>The index couldn’t be loaded.</h3><p>Preview this site over HTTP, not file://. Run <code>python3 -m http.server 8000 --bind 127.0.0.1</code> from the repository root, then open <a href="http://localhost:8000">localhost:8000</a>.</p><button id="retry" type="button">Try again</button></div>
     <section id="results" aria-label="Search results" aria-busy="true"></section>
-    <div id="empty" hidden><span aria-hidden="true">∅</span><h3>No matching text</h3><p>Try fewer words, a resource name, or a broader game system.</p><button id="reset" type="button">Clear search</button></div>
+    <div id="empty" hidden><span aria-hidden="true">∅</span><h3>No matching text</h3><p id="empty-hint">Try fewer words or select more categories.</p><button id="reset" type="button">Reset all filters</button></div>
     <div class="more"><button id="more" type="button" hidden>Show more results</button></div>
-    <details id="coverage"><summary>What’s in this index?</summary><p id="coverage-description"></p><p>These are search records, not upgrade counts. Related names, descriptions, and effects are grouped where possible. Some labels and validation messages are included to avoid losing useful help text. No save data is read, no game code is executed, and no runtime scraping occurs.</p><dl id="category-counts"></dl><p><a href="data/index.json">Editable static data (JSON)</a> · <a href="README.md">Maintenance & extraction notes</a></p></details>
     <noscript><p class="scope-note">JavaScript is needed for instant search. You can still <a href="data/index.json">read or download the static index</a>.</p></noscript>
   </main>
   <footer><p>Independent fan reference · English text from Synergism <span id="version"></span></p><p>Game text © Platonic and Khafra, <a href="licenses/Synergism-MIT.txt">MIT license</a>. Inconsolata © The Inconsolata Project Authors, <a href="assets/fonts/OFL.txt">SIL OFL</a>.</p></footer>
